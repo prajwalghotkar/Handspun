@@ -1,5 +1,8 @@
 # NeuroGrip — Neural Hand Tracer
 
+1) https://graceful-cocada-dcc4f6.netlify.app/
+2) https://benevolent-alfajores-68d5ad.netlify.app/
+
 A browser-based real-time hand-tracking HUD. Uses [MediaPipe Hands](https://developers.google.com/mediapipe) for landmark detection and renders a glowing neon skeleton with comet-trail effects over your webcam feed, plus a live stats HUD (hands detected, FPS, gesture, speed).
 
 ## Project structure
