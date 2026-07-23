@@ -1,0 +1,235 @@
+:root{
+  --bg: #05070a;
+  --panel: rgba(8, 14, 20, 0.72);
+  --line: rgba(120, 220, 255, 0.18);
+  --cyan: #5ff0ff;
+  --magenta: #ff3fa4;
+  --green: #9dff5a;
+  --amber: #ffb84d;
+  --violet: #b78bff;
+  --text-dim: #7fa6b3;
+  --text: #eaf6f8;
+  --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --display: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  height: 100%;
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: radial-gradient(ellipse at 50% 30%, #0b1620 0%, #05070a 65%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#videoFrame {
+  position: relative;
+  width: min(100vw, 720px);
+  height: min(100vh, 960px);
+  overflow: hidden;
+  background: #000;
+  border-radius: 4px;
+}
+
+video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0.55;
+  filter: saturate(0.65) brightness(0.6) contrast(1.05);
+}
+
+canvas#overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- HUD ---- */
+.hud {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+
+.hud-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(6px);
+  padding: 10px 14px;
+  border-radius: 3px;
+}
+
+.top-left {
+  top: 16px;
+  left: 16px;
+  min-width: 168px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.row .label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.row .value {
+  color: var(--cyan);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(95,240,255,0.6);
+}
+
+.row .value.warn { color: var(--amber); text-shadow: 0 0 8px rgba(255,184,77,0.6); }
+.row .value.good { color: var(--green); text-shadow: 0 0 8px rgba(157,255,90,0.6); }
+
+.top-right {
+  top: 16px;
+  right: 16px;
+  text-align: right;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.top-right .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--magenta);
+  box-shadow: 0 0 6px var(--magenta);
+  margin-right: 6px;
+  animation: blink 1.6s infinite ease-in-out;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+.bottom-bar {
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+.chip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip .label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;}
+.chip .value { color: var(--text); font-weight: 700; font-family: var(--display); font-size: 14px; }
+
+.title {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  z-index: 5;
+  pointer-events: none;
+}
+
+#startOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(3,6,9,0.9);
+  text-align: center;
+  padding: 24px;
+}
+
+#startOverlay h1 {
+  font-family: var(--display);
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+#startOverlay p {
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 320px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+#startBtn {
+  font-family: var(--mono);
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  padding: 12px 28px;
+  border-radius: 3px;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#startBtn:hover {
+  background: var(--cyan);
+  color: #05070a;
+  box-shadow: 0 0 24px rgba(95,240,255,0.5);
+}
+
+#errBox {
+  color: var(--magenta);
+  font-size: 11px;
+  max-width: 320px;
+}
+
+.scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.015) 0px,
+    rgba(255,255,255,0.015) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 6;
+  mix-blend-mode: overlay;
+}

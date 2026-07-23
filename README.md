@@ -1,5 +1,3 @@
-# Handspun
-----
 # NeuroGrip — Neural Hand Tracer
 
 A browser-based real-time hand-tracking HUD. Uses [MediaPipe Hands](https://developers.google.com/mediapipe) for landmark detection and renders a glowing neon skeleton with comet-trail effects over your webcam feed, plus a live stats HUD (hands detected, FPS, gesture, speed).

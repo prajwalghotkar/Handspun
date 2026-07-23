@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NeuroGrip — Neural Hand Tracer</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="stage">
+  <div class="title">NeuroGrip</div>
+  <div id="videoFrame">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <div class="scanline"></div>
+
+    <div class="hud top-left hud-panel">
+      <div class="row"><span class="label">Hands Detected</span><span class="value" id="handsCount">0</span></div>
+      <div class="row"><span class="label">FPS</span><span class="value" id="fpsVal">0</span></div>
+    </div>
+
+    <div class="hud top-right">
+      <div><span class="dot"></span>LIVE</div>
+      <div id="clock" style="margin-top:4px;">--:--:--</div>
+    </div>
+
+    <div class="hud bottom-bar">
+      <div class="chip">
+        <span class="label">Gesture</span>
+        <span class="value" id="gestureVal">—</span>
+      </div>
+      <div class="chip">
+        <span class="label">Speed</span>
+        <span class="value" id="speedVal">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="startOverlay">
+    <h1>NeuroGrip</h1>
+    <p>Runs entirely in your browser using your webcam. Nothing is uploaded — all tracking happens locally on-device.</p>
+    <button id="startBtn">Enable Camera</button>
+    <div id="errBox"></div>
+  </div>
+</div>
+
+<!-- MediaPipe Hands (loaded from CDN at runtime) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="script.js"></script>
+</body>
+</html>
