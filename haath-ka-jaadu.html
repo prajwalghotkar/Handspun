@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HAATH · summon with your hand</title>
+<style>
+  :root{
+    --ink:#eaf6ff;
+    --dim:#7fa3b8;
+    --line: rgba(140,200,220,0.35);
+    --glass: rgba(8,16,22,0.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background: radial-gradient(ellipse at 50% 20%, #0c1a22 0%, #060b10 55%, #020304 100%);
+    overflow:hidden;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color:var(--ink);
+    -webkit-user-select:none; user-select:none;
+  }
+  #stage{ position:fixed; inset:0; display:block; touch-action:none; cursor:crosshair; }
+
+  /* ---------- top bar ---------- */
+  .hud{ position:fixed; inset:0; pointer-events:none; z-index:10; }
+  .brand{
+    position:absolute; top:22px; left:26px;
+    font-size:13px; letter-spacing:0.32em; text-transform:uppercase;
+    color:var(--ink); font-weight:600;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand .dot{ width:8px;height:8px;border-radius:50%; background:#4de2ff; box-shadow:0 0 12px 3px #4de2ffaa; }
+  .brand small{ display:block; font-size:10px; letter-spacing:0.2em; color:var(--dim); font-weight:400; margin-top:3px; }
+
+  .status{
+    position:absolute; top:22px; right:26px;
+    font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    padding:9px 14px; border-radius:100px;
+    background:var(--glass); border:1px solid var(--line);
+    backdrop-filter:blur(10px);
+    display:flex; align-items:center; gap:8px;
+    color:var(--ink);
+  }
+  .status .led{ width:7px;height:7px;border-radius:50%; background:#ff5c5c; box-shadow:0 0 8px #ff5c5c; transition:background .3s, box-shadow .3s; }
+  .status.live .led{ background:#48ffb0; box-shadow:0 0 8px #48ffb0; }
+
+  .camwrap{
+    position:absolute; top:70px; right:26px; width:96px; height:96px;
+    border-radius:50%; overflow:hidden; border:1px solid var(--line);
+    background:#000; box-shadow:0 0 0 4px rgba(8,16,22,0.4), 0 8px 24px rgba(0,0,0,.5);
+    opacity:0; transform:scale(.8); transition:opacity .5s ease, transform .5s ease;
+  }
+  .camwrap.show{ opacity:1; transform:scale(1); }
+  .camwrap video{ width:100%; height:100%; object-fit:cover; transform:scaleX(-1); opacity:0.85; }
+  .camwrap .ring{ position:absolute; inset:0; border-radius:50%; border:2px solid #4de2ff55; pointer-events:none; }
+
+  /* ---------- creature dots selector ---------- */
+  .species{
+    position:absolute; left:26px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .species .chip{
+    display:flex; align-items:center; gap:10px;
+    font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--dim);
+    opacity:0.5; transition:opacity .3s;
+  }
+  .species .chip.active{ opacity:1; color:var(--ink); }
+  .species .chip i{ width:9px; height:9px; border-radius:50%; display:inline-block; border:1px solid var(--line); }
+  .species .chip.active i{ box-shadow:0 0 10px 2px currentColor; }
+
+  /* ---------- bottom instructions ---------- */
+  .dock{
+    position:absolute; left:50%; bottom:22px; transform:translateX(-50%);
+    background:var(--glass); border:1px solid var(--line); border-radius:16px;
+    backdrop-filter:blur(10px);
+    padding:14px 22px; max-width:92vw;
+    display:flex; gap:26px; align-items:center;
+    font-size:12px; color:var(--dim); letter-spacing:0.02em;
+  }
+  .dock b{ color:var(--ink); font-weight:600; }
+  .dock .sep{ width:1px; height:22px; background:var(--line); }
+  .dock .col{ display:flex; flex-direction:column; gap:2px; }
+
+  .credit{
+    position:absolute; bottom:24px; right:26px;
+    font-size:10px; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim);
+    writing-mode: vertical-rl;
+    opacity:0.55;
+  }
+
+  .veil{
+    position:fixed; inset:0; z-index:50; background:#040709;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
+    transition:opacity .6s ease; 
+  }
+  .veil h1{ font-size:15px; letter-spacing:0.4em; text-transform:uppercase; font-weight:600; margin:0; }
+  .veil p{ font-size:12px; color:var(--dim); margin:0; letter-spacing:0.05em; max-width:340px; text-align:center; line-height:1.6; }
+  .veil button{
+    pointer-events:all; cursor:pointer;
+    background:linear-gradient(135deg,#4de2ff,#2c7dff); color:#00131a; font-weight:700;
+    border:none; padding:13px 30px; border-radius:100px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    box-shadow:0 6px 24px rgba(77,226,255,0.35);
+  }
+  .veil .skip{ background:none; box-shadow:none; color:var(--dim); font-weight:500; padding:6px; }
+  .spinner{ width:34px; height:34px; border-radius:50%; border:2px solid var(--line); border-top-color:#4de2ff; animation:spin 0.9s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  @media (max-width:640px){
+    .dock{ flex-direction:column; gap:8px; padding:12px 18px; font-size:11px; }
+    .dock .sep{ display:none; }
+    .species{ display:none; }
+    .camwrap{ width:72px; height:72px; top:64px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div class="hud">
+  <div class="brand">HAATH<small>khulo, jo chaho jaage</small></div>
+
+  <div class="status" id="statusPill"><span class="led"></span><span id="statusText">Shuru ho raha hai…</span></div>
+  <div class="camwrap" id="camWrap"><video id="camPreview" playsinline muted autoplay></video><div class="ring"></div></div>
+
+  <div class="species" id="speciesList">
+    <div class="chip active" data-i="0" style="color:#7CFFCB"><i></i>Dragon</div>
+    <div class="chip" data-i="1" style="color:#FFD166"><i></i>Phoenix</div>
+    <div class="chip" data-i="2" style="color:#7fe0ff"><i></i>Jellyfish</div>
+  </div>
+
+  <div class="dock" id="dock">
+    <div class="col"><b id="dockA">Haath kholo</b><span>creature ko bulao</span></div>
+    <div class="sep"></div>
+    <div class="col"><b id="dockB">Haath ghumao</b><span>usse control karo</span></div>
+    <div class="sep"></div>
+    <div class="col"><b id="dockC">1 / 2 / 3 ungli</b><span>species badlo</span></div>
+  </div>
+
+  <div class="credit">MADE BY WXLL.HX — SUMMON ENGINE</div>
+</div>
+
+<div class="veil" id="veil">
+  <h1>HAATH</h1>
+  <div class="spinner" id="veilSpin"></div>
+  <p id="veilText">Camera se real haath-tracking try ho rahi hai. Agar camera nahi mila, mouse/touch se bhi jaadu chalega.</p>
+  <button id="veilBtn" style="display:none">Shuru Karo</button>
+  <button class="skip" id="veilSkip" style="display:none">Mouse se try karo →</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================================
+   HAATH — hand-summoned creature engine
+   - Real webcam hand-tracking (MediaPipe Hands, loaded from a CDN) when the
+     browser + network allow camera + external model files.
+   - Falls back automatically to mouse / touch control otherwise, so the
+     experience always works.
+   ========================================================================= */
+
+const CREATOR = "@wxll.hx"; // <-- apna handle yahan daalo
+
+/* ---------------- THREE.JS BASE SCENE ---------------- */
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0,0,9);
+
+function resize(){
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize', resize);
+
+/* soft ambient starfield for depth */
+(function stars(){
+  const N=260, g = new THREE.BufferGeometry();
+  const pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    pos[i*3]   = (Math.random()-0.5)*30;
+    pos[i*3+1] = (Math.random()-0.5)*20;
+    pos[i*3+2] = -Math.random()*20 - 4;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const m = new THREE.PointsMaterial({ color:0x4a7a90, size:0.045, transparent:true, opacity:0.6 });
+  scene.add(new THREE.Points(g,m));
+})();
+
+/* the wireframe cage, like a capture volume */
+const cage = new THREE.Group();
+scene.add(cage);
+{
+  const size = 3.2;
+  const box = new THREE.BoxGeometry(size,size,size);
+  const edges = new THREE.EdgesGeometry(box);
+  const mat = new THREE.LineBasicMaterial({ color:0x8fd8ff, transparent:true, opacity:0.22 });
+  cage.add(new THREE.LineSegments(edges, mat));
+  // corner nodes
+  const cs = size/2;
+  const corners = [];
+  for(const x of [-cs,cs]) for(const y of [-cs,cs]) for(const z of [-cs,cs]) corners.push([x,y,z]);
+  const nodeGeo = new THREE.SphereGeometry(0.035,8,8);
+  const nodeMat = new THREE.MeshBasicMaterial({ color:0x8fd8ff, transparent:true, opacity:0.5 });
+  corners.forEach(([x,y,z])=>{
+    const n = new THREE.Mesh(nodeGeo,nodeMat);
+    n.position.set(x,y,z);
+    cage.add(n);
+  });
+}
+
+/* glow sprite texture, generated once */
+const glowTex = (function(){
+  const c = document.createElement('canvas'); c.width=c.height=128;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(64,64,0,64,64,64);
+  grad.addColorStop(0,'rgba(255,255,255,1)');
+  grad.addColorStop(0.35,'rgba(255,255,255,0.55)');
+  grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+})();
+
+/* ---------------- CREATURE ENGINE ---------------- */
+// generic chain-follow ("rope") procedural creature: a spine of points plus
+// several trailing appendage chains (wings / tentacles), each glowing.
+
+const SPECIES = [
+  { name:'Dragon',   spine:16, spineLen:0.34, appendages:6,  apLen:8,  apSeg:0.22, spread:1.3,
+    head:new THREE.Color(0x9cffe0), tail:new THREE.Color(0x1b2a6b), accent:new THREE.Color(0xff6a3d) },
+  { name:'Phoenix',  spine:14, spineLen:0.30, appendages:8,  apLen:10, apSeg:0.20, spread:1.7,
+    head:new THREE.Color(0xfff3b0), tail:new THREE.Color(0xff3d3d), accent:new THREE.Color(0xffd166) },
+  { name:'Jellyfish',spine:8,  spineLen:0.22, appendages:11, apLen:14, apSeg:0.16, spread:0.55,
+    head:new THREE.Color(0xdfffff), tail:new THREE.Color(0x1560bd), accent:new THREE.Color(0x7fe0ff) },
+];
+
+function makeChain(n, segLen, start){
+  const pts = [];
+  for(let i=0;i<n;i++) pts.push(start.clone().add(new THREE.Vector3(0,-i*segLen,0)));
+  return pts;
+}
+
+function lineWithGlow(nColor0, colorMid, colorEnd, count){
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count*3);
+  const colors = new Float32Array(count*3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+  const mat = new THREE.LineBasicMaterial({ vertexColors:true, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false });
+  return new THREE.Line(geo, mat);
+}
+
+class Creature{
+  constructor(cfg){
+    this.cfg = cfg;
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(0.001);
+    scene.add(this.group);
+
+    this.spine = makeChain(cfg.spine, cfg.spineLen, new THREE.Vector3());
+    this.spineLine = lineWithGlow(cfg.head, null, cfg.tail, cfg.spine);
+    this.group.add(this.spineLine);
+
+    // glow sprites along spine
+    this.spineDots = [];
+    for(let i=0;i<cfg.spine;i++){
+      const mat = new THREE.SpriteMaterial({ map:glowTex, color: cfg.head.clone().lerp(cfg.tail, i/(cfg.spine-1)), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false });
+      const spr = new THREE.Sprite(mat);
+      const s = 0.34 * (1 - 0.75*i/cfg.spine) + 0.06;
+      spr.scale.setScalar(s);
+      this.group.add(spr);
+      this.spineDots.push(spr);
+    }
+
+    // appendages (wings / tentacles) hanging off points along the spine
+    this.appendages = [];
+    for(let a=0;a<cfg.appendages;a++){
+      const t = 0.15 + 0.7*(a/(cfg.appendages-1||1));
+      const anchorIndex = Math.min(cfg.spine-1, Math.round(t*cfg.spine));
+      const side = (a%2===0)?-1:1;
+      const chain = makeChain(cfg.apLen, cfg.apSeg, new THREE.Vector3(side*0.4,0,0));
+      const line = lineWithGlow(cfg.accent, null, cfg.tail, cfg.apLen);
+      this.group.add(line);
+      this.appendages.push({ chain, line, anchorIndex, side, phase: Math.random()*Math.PI*2 });
+    }
+
+    this.openAmt = 0; // 0..1 materialisation
+    this.targetPos = new THREE.Vector3(0,0,0);
+    this.headPos = new THREE.Vector3(0,0,0);
+    this.scaleTarget = 1;
+    this.rotZTarget = 0;
+    this.t = 0;
+  }
+
+  dispose(){
+    scene.remove(this.group);
+    this.group.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); });
+  }
+
+  update(dt, ctrl){
+    this.t += dt;
+    const cfg = this.cfg;
+
+    // smooth open amount (materialise / dematerialise)
+    const openGoal = ctrl.open ? 1 : 0;
+    this.openAmt += (openGoal - this.openAmt) * Math.min(1, dt*4.5);
+
+    // smooth follow target
+    this.headPos.lerp(ctrl.pos, Math.min(1, dt*6));
+    this.scaleTarget = ctrl.scale || 1;
+    const curScale = 0.001 + (this.scaleTarget) * Math.max(0, this.openAmt);
+    this.group.scale.setScalar(curScale);
+    this.group.visible = this.openAmt > 0.01;
+
+    // idle bob + auto rotate + hand-tilt roll
+    const bob = Math.sin(this.t*1.6)*0.12;
+    this.group.position.set(this.headPos.x, this.headPos.y + bob, this.headPos.z);
+    this.group.rotation.y += dt*0.35;
+    this.group.rotation.z += (ctrl.roll - this.group.rotation.z) * Math.min(1, dt*3);
+
+    // ---- spine chain follow ----
+    const spine = this.spine;
+    spine[0].set(0,0,0); // head sits at group origin
+    for(let i=1;i<spine.length;i++){
+      const prev = spine[i-1], cur = spine[i];
+      const dir = new THREE.Vector3().subVectors(cur, prev);
+      if(dir.lengthSq()<1e-6) dir.set(0,-1,0);
+      dir.normalize();
+      // add gentle undulation
+      const wave = Math.sin(this.t*2.4 - i*0.55) * 0.10 * (i/spine.length);
+      cur.copy(prev).add(dir.multiplyScalar(cfg.spineLen));
+      cur.x += wave;
+    }
+    const posAttr = this.spineLine.geometry.attributes.position;
+    const colAttr = this.spineLine.geometry.attributes.color;
+    for(let i=0;i<spine.length;i++){
+      posAttr.setXYZ(i, spine[i].x, spine[i].y, spine[i].z);
+      const c = cfg.head.clone().lerp(cfg.tail, i/(spine.length-1));
+      colAttr.setXYZ(i, c.r, c.g, c.b);
+      const dot = this.spineDots[i];
+      dot.position.copy(spine[i]);
+      dot.material.opacity = 0.9*this.openAmt;
+    }
+    posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+
+    // ---- appendages (wings / tentacles) ----
+    this.appendages.forEach((ap,idx)=>{
+      const anchor = spine[ap.anchorIndex];
+      const sway = Math.sin(this.t*1.8 + ap.phase) * cfg.spread * 0.5;
+      const outward = ap.side * cfg.spread;
+      ap.chain[0].copy(anchor).add(new THREE.Vector3(outward*0.3, 0.05, 0));
+      for(let i=1;i<ap.chain.length;i++){
+        const prev = ap.chain[i-1], cur = ap.chain[i];
+        const dir = new THREE.Vector3().subVectors(cur, prev);
+        if(dir.lengthSq()<1e-6) dir.set(outward>0?1:-1,-0.6,0);
+        dir.normalize();
+        cur.copy(prev).add(dir.multiplyScalar(cfg.apSeg));
+        const wobble = Math.sin(this.t*2.1 + ap.phase + i*0.6) * (0.10 + 0.14*(i/ap.chain.length));
+        cur.x += wobble * (ap.side);
+        cur.z += Math.cos(this.t*1.4 + ap.phase + i*0.4) * 0.05;
+        cur.y -= 0.0; 
+      }
+      // slight outward pull for wing feel
+      ap.chain.forEach((p,i)=>{ p.x += outward*0.02*(i/ap.chain.length); });
+
+      const pAttr = ap.line.geometry.attributes.position;
+      const cAttr = ap.line.geometry.attributes.color;
+      for(let i=0;i<ap.chain.length;i++){
+        pAttr.setXYZ(i, ap.chain[i].x, ap.chain[i].y, ap.chain[i].z);
+        const c = cfg.accent.clone().lerp(cfg.tail, i/(ap.chain.length-1));
+        cAttr.setXYZ(i, c.r,c.g,c.b);
+      }
+      pAttr.needsUpdate = true; cAttr.needsUpdate = true;
+      ap.line.material.opacity = 0.75*this.openAmt;
+    });
+  }
+}
+
+let current = new Creature(SPECIES[0]);
+let speciesIndex = 0;
+
+function switchSpecies(i){
+  i = ((i%SPECIES.length)+SPECIES.length)%SPECIES.length;
+  if(i===speciesIndex) return;
+  speciesIndex = i;
+  const old = current;
+  current = new Creature(SPECIES[i]);
+  current.openAmt = old.openAmt; // continue the materialisation smoothly
+  current.headPos.copy(old.headPos);
+  old.dispose();
+  document.querySelectorAll('.species .chip').forEach((el,idx)=>{
+    el.classList.toggle('active', idx===i);
+  });
+}
+
+/* ---------------- CONTROL STATE ---------------- */
+// Every input method (mouse or hand-tracking) just needs to fill this object.
+const ctrl = { pos:new THREE.Vector3(0,0,0), open:false, scale:1, roll:0 };
+
+/* map a normalised [-1,1] screen-ish coordinate onto the plane at z=0 */
+const rayPlane = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+const raycaster = new THREE.Raycaster();
+function ndcToWorld(nx, ny, out){
+  raycaster.setFromCamera({x:nx,y:ny}, camera);
+  const p = new THREE.Vector3();
+  raycaster.ray.intersectPlane(rayPlane, p);
+  if(p) out.copy(p);
+  return out;
+}
+
+/* ---------------- MOUSE / TOUCH FALLBACK ---------------- */
+let usingMouse = false;
+function enableMouseControl(){
+  usingMouse = true;
+  const statusPill = document.getElementById('statusPill');
+  statusPill.classList.remove('live');
+  document.getElementById('statusText').textContent = 'Mouse / touch mode';
+  document.getElementById('dockA').textContent = 'Click & hold';
+  document.getElementById('dockB').textContent = 'Move cursor';
+  document.getElementById('dockC').textContent = 'Scroll / 1-2-3';
+
+  let down = false;
+  function setFromClient(x,y){
+    const nx = (x/innerWidth)*2 - 1;
+    const ny = -(y/innerHeight)*2 + 1;
+    ndcToWorld(nx, ny, ctrl.pos);
+  }
+  canvas.addEventListener('mousemove', e=> setFromClient(e.clientX, e.clientY));
+  canvas.addEventListener('mousedown', e=>{ down=true; ctrl.open=true; setFromClient(e.clientX,e.clientY); });
+  window.addEventListener('mouseup', ()=>{ down=false; ctrl.open=false; });
+  canvas.addEventListener('touchstart', e=>{ ctrl.open=true; const t=e.touches[0]; setFromClient(t.clientX,t.clientY); }, {passive:true});
+  canvas.addEventListener('touchmove', e=>{ const t=e.touches[0]; setFromClient(t.clientX,t.clientY); }, {passive:true});
+  canvas.addEventListener('touchend', ()=>{ ctrl.open=false; }, {passive:true});
+
+  canvas.addEventListener('wheel', e=>{ switchSpecies(speciesIndex + (e.deltaY>0?1:-1)); }, {passive:true});
+  window.addEventListener('keydown', e=>{
+    if(e.key==='1') switchSpecies(0);
+    if(e.key==='2') switchSpecies(1);
+    if(e.key==='3') switchSpecies(2);
+  });
+
+  // gentle pulsing scale via scroll-independent breathing, mouse doesn't drive scale
+  ctrl.scale = 1;
+}
+
+/* ---------------- REAL HAND TRACKING (best effort) ---------------- */
+let usingHands = false;
+let handsInstance = null, rafId = null, videoEl = null;
+
+function loadScript(src, timeoutMs){
+  return new Promise((resolve,reject)=>{
+    const s = document.createElement('script');
+    s.src = src; s.crossOrigin = 'anonymous';
+    const timer = setTimeout(()=>reject(new Error('timeout: '+src)), timeoutMs);
+    s.onload = ()=>{ clearTimeout(timer); resolve(); };
+    s.onerror = ()=>{ clearTimeout(timer); reject(new Error('failed: '+src)); };
+    document.head.appendChild(s);
+  });
+}
+
+function countFingers(lm){
+  // lm: 21 landmarks, normalised image coords (x,y in [0,1], y down)
+  let n = 0;
+  const tips = [8,12,16,20], pips=[6,10,14,18];
+  for(let i=0;i<4;i++) if(lm[tips[i]].y < lm[pips[i]].y - 0.02) n++;
+  // thumb: compare x distance from palm depending which side it's on
+  const thumbExtended = Math.abs(lm[4].x - lm[17].x) > Math.abs(lm[3].x - lm[17].x) + 0.02;
+  if(thumbExtended) n++;
+  return n;
+}
+
+async function initHandTracking(){
+  document.getElementById('veilText').textContent = 'Camera aur AI model load ho rahe hain…';
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js', 5000);
+  }catch(e){
+    throw new Error('model-load-failed');
+  }
+  if(typeof Hands === 'undefined') throw new Error('model-not-available');
+
+  videoEl = document.getElementById('camPreview');
+  const stream = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:false });
+  videoEl.srcObject = stream;
+  await videoEl.play();
+  document.getElementById('camWrap').classList.add('show');
+
+  handsInstance = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+  handsInstance.setOptions({ maxNumHands:2, modelComplexity:1, minDetectionConfidence:0.6, minTrackingConfidence:0.5 });
+
+  let lastPrimary = null, lastSecondary = null;
+
+  handsInstance.onResults((results)=>{
+    const hands = results.multiHandLandmarks || [];
+    if(hands.length===0){
+      ctrl.open = false;
+      return;
+    }
+    // pick primary = larger / first hand for gesture + position
+    const primary = hands[0];
+    const secondary = hands.length>1 ? hands[1] : null;
+
+    const fingers = countFingers(primary);
+    ctrl.open = fingers >= 2;
+    if(fingers === 1) switchSpecies(2);       // jellyfish
+    else if(fingers === 2) switchSpecies(1);  // phoenix
+    else if(fingers >= 3) switchSpecies(0);   // dragon
+
+    const palm = primary[9]; // middle finger MCP ~ palm centre
+    const nx = (0.5 - palm.x) * 2;   // mirrored (selfie view)
+    const ny = (0.5 - palm.y) * 2 * 0.75 + 0.15;
+    ndcToWorld(nx, ny, ctrl.pos);
+
+    // roll from wrist -> middle mcp vector
+    const wrist = primary[0];
+    ctrl.roll = Math.atan2(-(palm.x - wrist.x), -(palm.y - wrist.y)) * 0.4;
+
+    if(secondary){
+      const d = Math.hypot(primary[0].x-secondary[0].x, primary[0].y-secondary[0].y);
+      ctrl.scale = Math.min(2.4, Math.max(0.5, d*4));
+    } else {
+      ctrl.scale += (1-ctrl.scale)*0.05;
+    }
+  });
+
+  async function frameLoop(){
+    if(videoEl.readyState >= 2){
+      await handsInstance.send({ image: videoEl });
+    }
+    rafId = requestAnimationFrame(frameLoop);
+  }
+  frameLoop();
+
+  usingHands = true;
+  const statusPill = document.getElementById('statusPill');
+  statusPill.classList.add('live');
+  document.getElementById('statusText').textContent = 'Camera live — haath dikhao';
+}
+
+/* ---------------- BOOT SEQUENCE ---------------- */
+const veil = document.getElementById('veil');
+const veilBtn = document.getElementById('veilBtn');
+const veilSkip = document.getElementById('veilSkip');
+const veilSpin = document.getElementById('veilSpin');
+
+function hideVeil(){
+  veil.style.opacity = '0';
+  setTimeout(()=> veil.style.display='none', 650);
+}
+
+async function boot(){
+  try{
+    await initHandTracking();
+    hideVeil();
+  }catch(err){
+    veilSpin.style.display='none';
+    document.getElementById('veilText').textContent =
+      'Camera ya AI model available nahi hai is browser/network mein. Koi baat nahi — mouse ya touch se bhi jaadu chalega.';
+    veilBtn.style.display='inline-block';
+    veilBtn.textContent = 'Mouse se Shuru Karo';
+    veilBtn.onclick = ()=>{ enableMouseControl(); hideVeil(); };
+  }
+}
+
+document.querySelectorAll('.species .chip').forEach(el=>{
+  el.addEventListener('click', ()=> switchSpecies(parseInt(el.dataset.i)));
+});
+
+boot();
+
+/* ---------------- MAIN LOOP ---------------- */
+let last = performance.now();
+function animate(now){
+  const dt = Math.min(0.05, (now-last)/1000);
+  last = now;
+  cage.rotation.y += dt*0.06;
+  cage.rotation.x = Math.sin(now*0.00012)*0.05;
+  current.update(dt, ctrl);
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
